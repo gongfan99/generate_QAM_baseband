@@ -1,0 +1,1 @@
+cl /EHsc /I ../ /Tptest.cc /link /out:test.exe 
