@@ -1,11 +1,13 @@
 #pragma once
 
+#include <iostream>
 #include <cmath>
 #include <random>
 #include <vector>
 #include <algorithm>
+#include <string>
 
-void generate_QAM_baseband(){}
+std::string generate_QAM_baseband(){
 
 const double PI = 3.141592653589793;
 
@@ -15,7 +17,7 @@ double rollOff = 0.13;
 double symbolRate = 168000;
 unsigned int totalSymbols = 1680;
 unsigned short samplesPerSymbol = 5;
-unsigned short rrcTapNum = 128;
+constexpr unsigned short rrcTapNum = 32;
 
 double sampleRate = symbolRate * samplesPerSymbol;
 double samplePeriod = 1 / sampleRate;
@@ -23,16 +25,16 @@ double samplePeriod = 1 / sampleRate;
 double rrcImpulseResp[rrcTapNum];
 
 int i, j;
-double specialRollOffPoint = 1 / (4 * rollOff * symbolRate);
+double specialRollOffPoint = 1 / (4 * rollOff);
 double t;
 for (i = 0; i < rrcTapNum; i++){
   t = (i - rrcTapNum / 2) * samplePeriod;
-  if (abs(t) < 1e-6){
+  if (abs(t * symbolRate) < 1e-6){
     rrcImpulseResp[i] = symbolRate * (1 + rollOff * (4 / PI - 1));
-  } else if (abs(t - specialRollOffPoint) < 1e-6 || abs(t + specialRollOffPoint) < 1e-6){
-    rrcImpulseResp[i] = (symbolRate * rollOff / 1.41421) * ((1 + 2 / PI) * sin(PI / (4 * rollOff)) + (1 - 2 / PI) * cos(PI / (4 * rollOff)));
+  } else if (abs(t * symbolRate - specialRollOffPoint) < 1e-6 || abs(t * symbolRate + specialRollOffPoint) < 1e-6){
+    rrcImpulseResp[i] = (symbolRate * rollOff / 1.41421356237) * ((1 + 2 / PI) * sin(PI / (4 * rollOff)) + (1 - 2 / PI) * cos(PI / (4 * rollOff)));
   } else {
-    rrcImpulseResp[i] = (sin(PI * symbolRate * t * (1 - rollOff)) + 4 * roolOff * symbolRate * t * cos(PI * symbolRate * t * (1 + rollOff))) / (PI * t * (1 - 16 * roolOff * roolOff * symbolRate * symbolRate * t * t);
+    rrcImpulseResp[i] = (sin(PI * symbolRate * t * (1 - rollOff)) + 4 * rollOff * symbolRate * t * cos(PI * symbolRate * t * (1 + rollOff))) / (PI * t * (1 - 16 * rollOff * rollOff * symbolRate * symbolRate * t * t));
   }
 }
 
@@ -57,6 +59,19 @@ auto minmaxIsample = std::minmax_element(Isample.begin(), Isample.end());
 auto minmaxQsample = std::minmax_element(Qsample.begin(), Qsample.end());
 double temp1[4] = {abs(*minmaxIsample.first), *minmaxIsample.second, abs(*minmaxQsample.first), *minmaxQsample.second};
 double maxIQsample = *std::max_element(temp1, temp1 + 4);
-std::vector<char> interweaveIQ(4 * totalSamples);
+std::string interleaveIQ(4 * totalSamples, NULL);
+short int int16Value;
 for (i = 0; i < totalSamples; i++){
+  int16Value = Isample[i] * 23000 / maxIQsample;
+  interleaveIQ[4 * i] = (int16Value >> 8) & 0xFF;
+  interleaveIQ[4 * i + 1] = int16Value & 0xFF;
+  int16Value = Qsample[i] * 23000 / maxIQsample;
+  interleaveIQ[4 * i + 2] = (int16Value >> 8) & 0xFF;
+  interleaveIQ[4 * i + 3] = int16Value & 0xFF;
+}
+for (double temp2 : rrcImpulseResp){
+std::cout << temp2 << std::endl;
+}
+
+return interleaveIQ;
 }
