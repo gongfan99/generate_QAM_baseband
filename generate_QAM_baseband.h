@@ -15,8 +15,8 @@ void generate_IQ_symbol_QAM_random(std::vector<double>& Isymbol, std::vector<dou
   std::uniform_int_distribution<> dis(0, std::sqrt(QAM) - 1);
   int i;
   for (i = 0; i < Isymbol.size(); i++){
-    Isymbol[i] = dis(gen) - std::sqrt(QAM) / 2 + 0.5;
-    Qsymbol[i] = dis(gen) - std::sqrt(QAM) / 2 + 0.5;
+    Isymbol[i] = dis(gen) - std::sqrt(QAM) * 0.5 + 0.5;
+    Qsymbol[i] = dis(gen) - std::sqrt(QAM) * 0.5 + 0.5;
   }
 }
 
@@ -34,7 +34,7 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   double specialRollOffPoint = 1 / (4 * rollOff);
   double t;
   for (i = 0; i < rrcTapNum; i++){
-    t = (i - rrcTapNum / 2) * samplePeriod;
+    t = (i - rrcTapNum * 0.5) * samplePeriod;
     if (abs(t * symbolRate) < 1e-6){
       rrcImpulseResp[i] = symbolRate * (1 + rollOff * (4 / PI - 1));
     } else if (abs(t * symbolRate - specialRollOffPoint) < 1e-6 || abs(t * symbolRate + specialRollOffPoint) < 1e-6){
@@ -45,8 +45,8 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   }
 
   unsigned int totalSamples = totalSymbols * samplesPerSymbol;
-    Isample.resize(totalSamples, 0);
-    Qsample.resize(totalSamples, 0);
+  Isample.resize(totalSamples, 0);
+  Qsample.resize(totalSamples, 0);
 
   for (i = 0; i < totalSymbols; i++){
     for (j = 0; j < rrcTapNum; j++){
@@ -54,12 +54,9 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
       Qsample[(samplesPerSymbol * i + j) % totalSamples] += Qsymbol[i] * rrcImpulseResp[j];
     }
   }
-  for (double temp2 : rrcImpulseResp){
-    //std::cout << temp2 << std::endl;
-  }
 }
 
-void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqGap){
+void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqOffset_1, double freqOffset_2){
   constexpr double PI = 3.141592653589793;
 
   unsigned int totalSymbols = Isymbol_1.size();
@@ -74,12 +71,14 @@ void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::
 
   Isample.resize(totalSamples, 0);
   Qsample.resize(totalSamples, 0);
-  double sinWT, cosWT;
+  double sinWT1, cosWT1, sinWT2, cosWT2;
   for (int i = 0; i < totalSamples; i++){
-    sinWT = sin(PI * freqGap * i * samplePeriod);
-    cosWT = cos(PI * freqGap * i * samplePeriod);
-    Isample[i] = -Isample_1[i] * sinWT - Qsample_1[i] * cosWT + Isample_2[i] * sinWT - Qsample_2[i] * cosWT;
-    Qsample[i] = Isample_1[i] * cosWT - Qsample_1[i] * sinWT + Isample_2[i] * cosWT + Qsample_2[i] * sinWT;
+    sinWT1 = sin(2 * PI * freqOffset_1 * i * samplePeriod);
+    cosWT1 = cos(2 * PI * freqOffset_1 * i * samplePeriod);
+    sinWT2 = sin(2 * PI * freqOffset_2 * i * samplePeriod);
+    cosWT2 = cos(2 * PI * freqOffset_2 * i * samplePeriod);
+    Isample[i] = Isample_1[i] * sinWT1 - Qsample_1[i] * cosWT1 + Isample_2[i] * sinWT2 - Qsample_2[i] * cosWT2;
+    Qsample[i] = Isample_1[i] * cosWT1 + Qsample_1[i] * sinWT1 + Isample_2[i] * cosWT2 + Qsample_2[i] * sinWT2;
   }
 }
 
@@ -108,7 +107,7 @@ void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Q
   status = viOpen(defaultRM, (ViRsrc)rsrcName.data(), VI_NULL, VI_NULL, &instr);
   
   std::string cmd;
-  cmd = ":SOURce:RADio:ARB:STATe OFF";
+  cmd = ":SOURce:RADio:ARB:STATe OFF\n";
   status = viWrite(instr, (ViBuf)cmd.data(), (ViUInt32)cmd.size(), (ViPUInt32)&retCount);
   
   cmd = std::to_string(interleaveIQ.size());
@@ -121,7 +120,10 @@ void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Q
   cmd = ":SOURce:RADio:ARB:SCLock:RATE " + std::to_string(sampleRate) + "\n";
   status = viWrite(instr, (ViBuf)cmd.data(), (ViUInt32)cmd.size(), (ViPUInt32)&retCount);
   
-  cmd = ":SOURce:RADio:ARB:STATe ON";
+  cmd = ":SOURce:RADio:ARB:STATe ON\n";
+  status = viWrite(instr, (ViBuf)cmd.data(), (ViUInt32)cmd.size(), (ViPUInt32)&retCount);
+  
+  cmd = ":SYSTem:COMMunicate:GTLocal\n";
   status = viWrite(instr, (ViBuf)cmd.data(), (ViUInt32)cmd.size(), (ViPUInt32)&retCount);
   
   viClose(instr);

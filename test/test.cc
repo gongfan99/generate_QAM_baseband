@@ -7,15 +7,17 @@
 #include "generate_QAM_baseband.h"
 
 int main(int argc, char* argv[]) {
-  unsigned int QAM = 64;
+  unsigned int QAM = 64; // 64QAM
   double rollOff = 0.13;
   double symbolRate = 168000;
-  unsigned int totalSymbols = 16;
-  unsigned int samplesPerSymbol = 2;
-  unsigned int rrcTapNum = 32;
-  double freqGap = 1e6;
+  unsigned int totalSymbols = 16800;
+  double freqOffset_1 = 0;
+  double freqOffset_2 = 0.6e6;
   bool singleCarrier = true;
-  std::string rsrcName = "GPIB::1::INSTR";
+  std::string rsrcName = "TCPIP0::192.168.0.30::inst0::INSTR"; // or "GPIB::1::INSTR"
+
+  unsigned int samplesPerSymbol = 4;
+  unsigned int rrcTapNum = 128 * samplesPerSymbol;
 
   if (argc < 3){
     std::cout << "Usage: test totalSymbols samplesPerSymbol" << std::endl;
@@ -31,12 +33,15 @@ int main(int argc, char* argv[]) {
 
     generate_baseband_IQ_waveform(Isample, Qsample, Isymbol, Qsymbol, rollOff, symbolRate, samplesPerSymbol, rrcTapNum);
   } else {
+    samplesPerSymbol = 4 * (abs(freqOffset_1) > abs(freqOffset_2)? abs(freqOffset_1) : abs(freqOffset_2)) / symbolRate;
+    rrcTapNum = 128 * samplesPerSymbol;
+
     std::vector<double> Isymbol_1, Qsymbol_1;
     generate_IQ_symbol_QAM_random(Isymbol_1, Qsymbol_1, totalSymbols, QAM);
     std::vector<double> Isymbol_2, Qsymbol_2;
     generate_IQ_symbol_QAM_random(Isymbol_2, Qsymbol_2, totalSymbols, QAM);
 
-    generate_baseband_IQ_waveform_2carriers(Isample, Qsample, Isymbol_1, Qsymbol_1, Isymbol_2, Qsymbol_2, rollOff, symbolRate, samplesPerSymbol, rrcTapNum, freqGap);
+    generate_baseband_IQ_waveform_2carriers(Isample, Qsample, Isymbol_1, Qsymbol_1, Isymbol_2, Qsymbol_2, rollOff, symbolRate, samplesPerSymbol, rrcTapNum, freqOffset_1, freqOffset_2);
   }
   
   double sampleRate = symbolRate * samplesPerSymbol;
