@@ -45,15 +45,21 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   }
 
   unsigned int totalSamples = totalSymbols * samplesPerSymbol;
-  Isample.resize(totalSamples, 0);
-  Qsample.resize(totalSamples, 0);
+  Isample.resize(totalSamples + rrcTapNum, 0);
+  Qsample.resize(totalSamples + rrcTapNum, 0);
 
   for (i = 0; i < totalSymbols; i++){
     for (j = 0; j < rrcTapNum; j++){
-      Isample[(samplesPerSymbol * i + j) % totalSamples] += Isymbol[i] * rrcImpulseResp[j];
-      Qsample[(samplesPerSymbol * i + j) % totalSamples] += Qsymbol[i] * rrcImpulseResp[j];
+      Isample[samplesPerSymbol * i + j] += Isymbol[i] * rrcImpulseResp[j];
+      Qsample[samplesPerSymbol * i + j] += Qsymbol[i] * rrcImpulseResp[j];
     }
   }
+  for (j = 0; j < rrcTapNum; j++){
+    Isample[j] += Isample[totalSamples + i];
+    Qsample[j] += Qsample[totalSamples + i];
+  }
+  Isample.resize(totalSamples);
+  Qsample.resize(totalSamples);
 }
 
 void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqOffset_1, double freqOffset_2){
@@ -77,8 +83,8 @@ void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::
     cosWT1 = cos(2 * PI * freqOffset_1 * i * samplePeriod);
     sinWT2 = sin(2 * PI * freqOffset_2 * i * samplePeriod);
     cosWT2 = cos(2 * PI * freqOffset_2 * i * samplePeriod);
-    Isample[i] = Isample_1[i] * sinWT1 - Qsample_1[i] * cosWT1 + Isample_2[i] * sinWT2 - Qsample_2[i] * cosWT2;
-    Qsample[i] = Isample_1[i] * cosWT1 + Qsample_1[i] * sinWT1 + Isample_2[i] * cosWT2 + Qsample_2[i] * sinWT2;
+    Isample[i] = Isample_1[i] * cosWT1 - Qsample_1[i] * sinWT1 + Isample_2[i] * cosWT2 - Qsample_2[i] * sinWT2;
+    Qsample[i] = Isample_1[i] * sinWT1 + Qsample_1[i] * cosWT1 + Isample_2[i] * sinWT2 + Qsample_2[i] * cosWT2;
   }
 }
 

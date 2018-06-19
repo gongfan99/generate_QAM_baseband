@@ -1,1 +1,1 @@
-cl /EHsc /I ../ /Tptest.cc ../visa64.lib /link /out:test.exe 
+cl /EHsc /O2 /I ../ /Tptest.cc ../visa64.lib /link /out:test.exe 
