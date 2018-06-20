@@ -88,7 +88,7 @@ void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::
   }
 }
 
-void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Qsample, double sampleRate, std::string& rsrcName){
+void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Qsample, double sampleRate, std::string& rsrcName, double IdcOffset, double QdcOffset, double IQphaseImbalance, double IQamplitudeImbalance){
   auto minmaxIsample = std::minmax_element(Isample.begin(), Isample.end());
   auto minmaxQsample = std::minmax_element(Qsample.begin(), Qsample.end());
   double temp1[4] = {abs(*minmaxIsample.first), *minmaxIsample.second, abs(*minmaxQsample.first), *minmaxQsample.second};
@@ -97,11 +97,20 @@ void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Q
   unsigned int totalSamples = Isample.size();
   std::string interleaveIQ(4 * totalSamples, NULL);
   long int16Value;
+  double Inormalized, Qnormalized;
   for (int i = 0; i < totalSamples; i++){
-    int16Value = std::lround(Isample[i] * 23000 / maxIQsample);
+    Inormalized = Isample[i] * 23000 / maxIQsample;
+    Qnormalized = Qsample[i] * 23000 / maxIQsample;
+    Inormalized -= IdcOffset;
+    Qnormalized -= QdcOffset;
+    Inormalized -= Qnormalized * IQphaseImbalance * 0.5;
+    Qnormalized -= Inormalized * IQphaseImbalance * 0.5;
+    Inormalized *= 1 + IQamplitudeImbalance * 0.5;
+    Qnormalized *= 1 - IQamplitudeImbalance * 0.5;
+    int16Value = std::lround(Inormalized);
     interleaveIQ[4 * i] = (int16Value >> 8) & 0xFF;
     interleaveIQ[4 * i + 1] = int16Value & 0xFF;
-    int16Value = std::lround(Qsample[i] * 23000 / maxIQsample);
+    int16Value = std::lround(Qnormalized);
     interleaveIQ[4 * i + 2] = (int16Value >> 8) & 0xFF;
     interleaveIQ[4 * i + 3] = int16Value & 0xFF;
   }

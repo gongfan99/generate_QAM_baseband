@@ -44,8 +44,9 @@ int main(int argc, char* argv[]) {
     generate_baseband_IQ_waveform_2carriers(Isample, Qsample, Isymbol_1, Qsymbol_1, Isymbol_2, Qsymbol_2, rollOff, symbolRate, samplesPerSymbol, rrcTapNum, freqOffset_1, freqOffset_2);
   }
   
+  double IdcOffset = 0, QdcOffset = 0, IQphaseImbalance = 0, IQamplitudeImbalance = 0;
   double sampleRate = symbolRate * samplesPerSymbol;
-  download_IQ_sample_VSG(Isample, Qsample, sampleRate, rsrcName);
+  download_IQ_sample_VSG(Isample, Qsample, sampleRate, rsrcName, IdcOffset, QdcOffset, IQphaseImbalance, IQamplitudeImbalance);
 
   std::cout << "generate_QAM_baseband" << std::endl;
 }
