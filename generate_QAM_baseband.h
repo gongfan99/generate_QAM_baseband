@@ -11,7 +11,7 @@ void generate_IQ_symbol_QAM_random(std::vector<double>& Isymbol, std::vector<dou
   Isymbol.resize(totalSymbols);
   Qsymbol.resize(totalSymbols);
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
-  std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd(); use gen(std::mt19937::default_seed) for consistent random number for test
   std::uniform_int_distribution<> dis(0, std::sqrt(QAM) - 1);
   int i;
   for (i = 0; i < Isymbol.size(); i++){
@@ -48,21 +48,27 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   Isample.resize(totalSamples + rrcTapNum, 0);
   Qsample.resize(totalSamples + rrcTapNum, 0);
 
+  double *pIsample, *pQsample;
+  double Isymbol_i, Qsymbol_i;
   for (i = 0; i < totalSymbols; i++){
+    pIsample = Isample.data() + samplesPerSymbol * i;
+    pQsample = Qsample.data() + samplesPerSymbol * i;
+    Isymbol_i = Isymbol[i];
+    Qsymbol_i = Qsymbol[i];
     for (j = 0; j < rrcTapNum; j++){
-      Isample[samplesPerSymbol * i + j] += Isymbol[i] * rrcImpulseResp[j];
-      Qsample[samplesPerSymbol * i + j] += Qsymbol[i] * rrcImpulseResp[j];
+      pIsample[j] += Isymbol_i * rrcImpulseResp[j];
+      pQsample[j] += Qsymbol_i * rrcImpulseResp[j];
     }
   }
   for (j = 0; j < rrcTapNum; j++){
-    Isample[j] += Isample[totalSamples + i];
-    Qsample[j] += Qsample[totalSamples + i];
+    Isample[j] += Isample[totalSamples + j];
+    Qsample[j] += Qsample[totalSamples + j];
   }
   Isample.resize(totalSamples);
   Qsample.resize(totalSamples);
 }
 
-void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqOffset_1, double freqOffset_2){
+void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqOffset_1, double freqOffset_2, double scale_1, double scale_2){
   constexpr double PI = 3.141592653589793;
 
   unsigned int totalSymbols = Isymbol_1.size();
@@ -83,8 +89,8 @@ void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::
     cosWT1 = cos(2 * PI * freqOffset_1 * i * samplePeriod);
     sinWT2 = sin(2 * PI * freqOffset_2 * i * samplePeriod);
     cosWT2 = cos(2 * PI * freqOffset_2 * i * samplePeriod);
-    Isample[i] = Isample_1[i] * cosWT1 - Qsample_1[i] * sinWT1 + Isample_2[i] * cosWT2 - Qsample_2[i] * sinWT2;
-    Qsample[i] = Isample_1[i] * sinWT1 + Qsample_1[i] * cosWT1 + Isample_2[i] * sinWT2 + Qsample_2[i] * cosWT2;
+    Isample[i] = scale_1 * (Isample_1[i] * cosWT1 - Qsample_1[i] * sinWT1) + scale_2 * (Isample_2[i] * cosWT2 - Qsample_2[i] * sinWT2);
+    Qsample[i] = scale_1 * (Isample_1[i] * sinWT1 + Qsample_1[i] * cosWT1) + scale_2 * (Isample_2[i] * sinWT2 + Qsample_2[i] * cosWT2);
   }
 }
 

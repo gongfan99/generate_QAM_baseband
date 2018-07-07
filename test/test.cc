@@ -13,6 +13,8 @@ int main(int argc, char* argv[]) {
   unsigned int totalSymbols = 16800;
   double freqOffset_1 = 0;
   double freqOffset_2 = 0.6e6;
+  double scale_1 = 1;
+  double scale_2 = 1;
   bool singleCarrier = true;
   std::string rsrcName = "TCPIP0::192.168.0.30::inst0::INSTR"; // or "GPIB::1::INSTR"
 
@@ -41,7 +43,7 @@ int main(int argc, char* argv[]) {
     std::vector<double> Isymbol_2, Qsymbol_2;
     generate_IQ_symbol_QAM_random(Isymbol_2, Qsymbol_2, totalSymbols, QAM);
 
-    generate_baseband_IQ_waveform_2carriers(Isample, Qsample, Isymbol_1, Qsymbol_1, Isymbol_2, Qsymbol_2, rollOff, symbolRate, samplesPerSymbol, rrcTapNum, freqOffset_1, freqOffset_2);
+    generate_baseband_IQ_waveform_2carriers(Isample, Qsample, Isymbol_1, Qsymbol_1, Isymbol_2, Qsymbol_2, rollOff, symbolRate, samplesPerSymbol, rrcTapNum, freqOffset_1, freqOffset_2, scale_1, scale_2);
   }
   
   double IdcOffset = 0, QdcOffset = 0, IQphaseImbalance = 0, IQamplitudeImbalance = 0;
