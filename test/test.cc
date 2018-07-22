@@ -7,12 +7,12 @@
 #include "generate_QAM_baseband.h"
 
 int main(int argc, char* argv[]) {
-  unsigned int QAM = 64; // 64QAM
-  double rollOff = 0.13;
-  double symbolRate = 168000;
-  unsigned int totalSymbols = 16800;
-  double freqOffset_1 = 0;
-  double freqOffset_2 = 0.6e6;
+  unsigned int QAM = 16; // 64QAM
+  double rollOff = 0.18;
+  double symbolRate = 32000;
+  unsigned int totalSymbols = 3200;
+  double freqOffset_1 = -0.3e6;
+  double freqOffset_2 = 0.3e6;
   double scale_1 = 1;
   double scale_2 = 1;
   bool singleCarrier = true;
