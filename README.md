@@ -17,4 +17,7 @@ It can generate single carrier or two carriers QAM baseband signal.
 
 # Reference
 https://en.wikipedia.org/wiki/Root-raised-cosine_filter
+
 https://en.wikipedia.org/wiki/Quadrature_amplitude_modulation
+
+https://github.com/gongfan99/IEEE_488_2_Definite_Length_Arbitrary_Block

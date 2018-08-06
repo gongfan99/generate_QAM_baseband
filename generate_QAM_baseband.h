@@ -1,3 +1,11 @@
+/**
+    generate_QAM_baseband.h
+    Purpose: Generate the baseband IQ signal for QAM; download to the signal generator
+
+    @author Fan Gong
+    @version 1.0 07/03/18 
+*/
+
 #pragma once
 
 #include <iostream>
@@ -7,6 +15,15 @@
 #include <algorithm>
 #include <string>
 
+/**
+    Generate random QAM symbols.
+
+    @param Isymbol The container of the returned I symbols.
+    @param Qsymbol The container of the returned Q symbols.
+    @param totalSymbols The total number of symbols to generate.
+    @param QAM The order of QAM e.g. 16 for 16QAM, 64 for 64QAM.
+    @return none
+*/
 void generate_IQ_symbol_QAM_random(std::vector<double>& Isymbol, std::vector<double>& Qsymbol, unsigned int totalSymbols, unsigned int QAM){
   Isymbol.resize(totalSymbols);
   Qsymbol.resize(totalSymbols);
@@ -20,6 +37,19 @@ void generate_IQ_symbol_QAM_random(std::vector<double>& Isymbol, std::vector<dou
   }
 }
 
+/**
+    Generate baseband samples from the I/Q symbols.
+
+    @param Isample The container of the returned I samples.
+    @param Qsample The container of the returned Q samples.
+    @param Isymbol The input I symbols.
+    @param Qsymbol The input Q symbols.
+    @param rollOff The roll-off factor of the raised cosine filter.
+    @param symbolRate The symbol rate in Hz.
+    @param samplesPerSymbol The number of samples per symbol.
+    @param rrcTapNum The tap number of the raised cosine filter.
+    @return none
+*/
 void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol, std::vector<double>& Qsymbol, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum){
   constexpr double PI = 3.141592653589793;
   constexpr double sqrt2 = 1.41421356237;
@@ -28,8 +58,8 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   double sampleRate = symbolRate * samplesPerSymbol;
   double samplePeriod = 1 / sampleRate;
 
+  // generate the impulse response of the raised cosine filter
   std::vector<double> rrcImpulseResp(rrcTapNum, 0);
-
   int i, j;
   double specialRollOffPoint = 1 / (4 * rollOff);
   double t;
@@ -44,10 +74,12 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
     }
   }
 
+  // prepare container of the output I/Q samples
   unsigned int totalSamples = totalSymbols * samplesPerSymbol;
   Isample.resize(totalSamples + rrcTapNum, 0);
   Qsample.resize(totalSamples + rrcTapNum, 0);
 
+  // apply the raised cosine filter
   double *pIsample, *pQsample;
   double Isymbol_i, Qsymbol_i;
   for (i = 0; i < totalSymbols; i++){
@@ -56,6 +88,7 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
     Isymbol_i = Isymbol[i];
     Qsymbol_i = Qsymbol[i];
     for (j = 0; j < rrcTapNum; j++){
+      // use pIsample instead of Isample to allow vectorization optimization
       pIsample[j] += Isymbol_i * rrcImpulseResp[j];
       pQsample[j] += Qsymbol_i * rrcImpulseResp[j];
     }
@@ -68,6 +101,25 @@ void generate_baseband_IQ_waveform(std::vector<double>& Isample, std::vector<dou
   Qsample.resize(totalSamples);
 }
 
+/**
+    Generate baseband samples for two carriers from the I/Q symbols.
+
+    @param Isample The container of the returned I samples.
+    @param Qsample The container of the returned Q samples.
+    @param Isymbol_1 The input I symbols for the first carrier.
+    @param Qsymbol_1 The input Q symbols for the first carrier.
+    @param Isymbol_2 The input I symbols for the second carrier.
+    @param Qsymbol_2 The input Q symbols for the second carrier.
+    @param rollOff The roll-off factor of the raised cosine filter.
+    @param symbolRate The symbol rate in Hz.
+    @param samplesPerSymbol The number of samples per symbol.
+    @param rrcTapNum The tap number of the raised cosine filter.
+    @param freqOffset_1 The frequency offset of the first carrier.
+    @param freqOffset_2 The frequency offset of the second carrier.
+    @param scale_1 The scale factor of the first carrier.
+    @param scale_2 The scale factor of the second carrier.
+    @return none
+*/
 void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::vector<double>& Qsample, std::vector<double>& Isymbol_1, std::vector<double>& Qsymbol_1, std::vector<double>& Isymbol_2, std::vector<double>& Qsymbol_2, double rollOff, double symbolRate, unsigned int samplesPerSymbol, unsigned int rrcTapNum, double freqOffset_1, double freqOffset_2, double scale_1, double scale_2){
   constexpr double PI = 3.141592653589793;
 
@@ -94,12 +146,26 @@ void generate_baseband_IQ_waveform_2carriers(std::vector<double>& Isample, std::
   }
 }
 
+/**
+    Download the I/Q waveform to the signal generator.
+
+    @param Isample The I samples.
+    @param Qsample The Q samples.
+    @param sampleRate The sample rate in Hz
+    @param rsrcName The SCPI name of the signal generator e.g. TCPIP0::192.168.0.29::inst0::INSTR or GPIB0::19::INSTR
+    @param IdcOffset The I channel DC offset of the signal generator.
+    @param QdcOffset The Q channel DC offset of the signal generator.
+    @param IQphaseImbalance The I/Q phase imbalance of the signal generator.
+    @param IQamplitudeImbalance The I/Q amplitude imbalance of the signal generator.
+    @return none
+*/
 void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Qsample, double sampleRate, std::string& rsrcName, double IdcOffset, double QdcOffset, double IQphaseImbalance, double IQamplitudeImbalance){
   auto minmaxIsample = std::minmax_element(Isample.begin(), Isample.end());
   auto minmaxQsample = std::minmax_element(Qsample.begin(), Qsample.end());
   double temp1[4] = {abs(*minmaxIsample.first), *minmaxIsample.second, abs(*minmaxQsample.first), *minmaxQsample.second};
   double maxIQsample = *std::max_element(temp1, temp1 + 4);
 
+  // generate the binary block data
   unsigned int totalSamples = Isample.size();
   std::string interleaveIQ(4 * totalSamples, NULL);
   long int16Value;
@@ -114,6 +180,7 @@ void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Q
     Inormalized *= 1 + IQamplitudeImbalance * 0.5;
     Qnormalized *= 1 - IQamplitudeImbalance * 0.5;
     int16Value = std::lround(Inormalized);
+    // intel uC is little-endian while the signal generator is big-endian
     interleaveIQ[4 * i] = (int16Value >> 8) & 0xFF;
     interleaveIQ[4 * i + 1] = int16Value & 0xFF;
     int16Value = std::lround(Qnormalized);
@@ -121,6 +188,7 @@ void download_IQ_sample_VSG(std::vector<double>& Isample, std::vector<double>& Q
     interleaveIQ[4 * i + 3] = int16Value & 0xFF;
   }
 
+  // download the binary block data to the signal generator
   ViStatus status;
   ViUInt32 retCount;
   ViSession defaultRM, instr;
